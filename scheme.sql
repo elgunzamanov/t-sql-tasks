@@ -1,86 +1,81 @@
--- TODO: Create Database
-CREATE DATABASE EcommerceDB;
+CREATE DATABASE FullStackCourse
 
--- TODO: Use the Database
-USE EcommerceDB;
+USE FullStackCourse;
 
--- TODO: Customers
-CREATE TABLE Customers
+CREATE TABLE Telimci
 (
-   Id    INT IDENTITY (1,1) PRIMARY KEY,
-   Name  NVARCHAR(100) NOT NULL,
-   Email VARCHAR(150) UNIQUE,
-   Phone VARCHAR(20)
+   Id       INT IDENTITY (1,1) PRIMARY KEY,
+   Ad       NVARCHAR(50) NOT NULL,
+   Soyad    NVARCHAR(50) NOT NULL,
+   AtaAdi   NVARCHAR(50),
+   Fin      NVARCHAR(20),
+   Tel      NVARCHAR(20),
+   Tevellud DATE,
+   Ixtisas  NVARCHAR(50),
+   Staj     INT,
+   Status   NVARCHAR(20)
 );
 
--- TODO: Categories
-CREATE TABLE Categories
+CREATE TABLE Paketler
+(
+   Id     INT IDENTITY (1,1) PRIMARY KEY,
+   Ad     NVARCHAR(100) NOT NULL,
+   Qiymet DECIMAL(10, 2),
+   Muddet INT
+);
+
+CREATE TABLE Bolme
+(
+   Id INT IDENTITY (1,1) PRIMARY KEY,
+   Ad NVARCHAR(50) NOT NULL
+);
+
+CREATE TABLE Movzu
+(
+   Id INT IDENTITY (1,1) PRIMARY KEY,
+   Ad NVARCHAR(100) NOT NULL
+);
+
+CREATE TABLE Telebe
+(
+   Id           INT IDENTITY (1,1) PRIMARY KEY,
+   Ad           NVARCHAR(50) NOT NULL,
+   Soyad        NVARCHAR(50) NOT NULL,
+   AtaAdi       NVARCHAR(50),
+   FinKod       NVARCHAR(20),
+   Universitet  NVARCHAR(100),
+   Ixtisas      NVARCHAR(50),
+   Kurs         INT,
+   Unvan        NVARCHAR(200),
+   ElaqeNomresi NVARCHAR(20),
+   Gmail        NVARCHAR(100)
+);
+
+CREATE TABLE Qeydiyyat
+(
+   Id            INT IDENTITY (1,1) PRIMARY KEY,
+   TelebeId      INT NOT NULL FOREIGN KEY REFERENCES Telebe (Id),
+   PaketId       INT NOT NULL FOREIGN KEY REFERENCES Paketler (Id),
+   MuqavileTarix DATE,
+   Endirim       DECIMAL(10, 2),
+   Status        NVARCHAR(20),
+   TelimciId     INT FOREIGN KEY REFERENCES Telimci (Id)
+);
+
+CREATE TABLE Odenis
 (
    Id          INT IDENTITY (1,1) PRIMARY KEY,
-   Name        NVARCHAR(150) NOT NULL,
-   Description NVARCHAR(MAX)
+   QeydiyyatId INT NOT NULL FOREIGN KEY REFERENCES Qeydiyyat (Id),
+   Tarix       DATE,
+   Mebleg      DECIMAL(10, 2)
 );
 
--- TODO: Products
-CREATE TABLE Products
+CREATE TABLE VideoDers
 (
-   Id          INT IDENTITY (1,1) PRIMARY KEY,
-   Name        NVARCHAR(150)  NOT NULL,
-   Description NVARCHAR(MAX),
-   Price       DECIMAL(10, 2) NOT NULL,
-   CategoryId  INT            NULL,
-
-   CONSTRAINT FK_Products_Categories
-      FOREIGN KEY (CategoryId) REFERENCES Categories (Id)
-);
-
--- TODO: Orders
-CREATE TABLE Orders
-(
-   Id         INT IDENTITY (1,1) PRIMARY KEY,
-   CustomerId INT NOT NULL,
-   OrderDate  DATETIME DEFAULT GETDATE(),
-   Status     NVARCHAR(50),
-
-   CONSTRAINT FK_Orders_Customers
-      FOREIGN KEY (CustomerId) REFERENCES Customers (Id)
-);
-
--- TODO: OrderItems
-CREATE TABLE OrderItems
-(
-   Id        INT IDENTITY (1,1) PRIMARY KEY,
-   OrderId   INT            NOT NULL,
-   ProductId INT            NOT NULL,
-   Quantity  INT            NOT NULL,
-   UnitPrice DECIMAL(10, 2) NOT NULL,
-
-   CONSTRAINT FK_OrderItems_Orders
-      FOREIGN KEY (OrderId) REFERENCES Orders (Id),
-
-   CONSTRAINT FK_OrderItems_Products
-      FOREIGN KEY (ProductId) REFERENCES Products (Id)
-);
-
--- TODO: Suppliers
-CREATE TABLE Suppliers
-(
-   Id          INT IDENTITY (1,1) PRIMARY KEY,
-   Name        NVARCHAR(150) NOT NULL,
-   ContactInfo NVARCHAR(MAX)
-);
-
--- TODO: ProductSuppliers (Many-to-Many)
-CREATE TABLE ProductSuppliers
-(
-   Id         INT IDENTITY (1,1) PRIMARY KEY,
-   ProductId  INT NOT NULL,
-   SupplierId INT NOT NULL,
-
-   CONSTRAINT FK_ProductSuppliers_Products
-      FOREIGN KEY (ProductId) REFERENCES Products (Id),
-
-   CONSTRAINT FK_ProductSuppliers_Suppliers
-      FOREIGN KEY (SupplierId) REFERENCES Suppliers (Id)
+   Id INT IDENTITY(1,1) PRIMARY KEY,
+   PaketId INT NOT NULL FOREIGN KEY REFERENCES Paketler(Id),
+   BolmeId INT NOT NULL FOREIGN KEY REFERENCES Bolme(Id),
+   MovzuId INT NOT NULL FOREIGN KEY REFERENCES Movzu(Id),
+   Ad NVARCHAR(100) NOT NULL
 );
 
