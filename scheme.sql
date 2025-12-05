@@ -1,0 +1,31 @@
+CREATE DATABASE SchoolDB;
+USE SchoolDB;
+
+CREATE TABLE Students (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    FullName NVARCHAR(100),
+    Age INT,
+    CreatedTime DATETIME DEFAULT GETDATE()
+);
+
+ALTER TABLE Students
+ADD Grade NVARCHAR(10);
+
+ALTER TABLE Students
+ALTER COLUMN Age SMALLINT;
+
+CREATE TABLE Teachers (
+    Id INT PRIMARY KEY IDENTITY(1,1),
+    FullName NVARCHAR(100),
+    Subject NVARCHAR(50),
+    StudentId INT FOREIGN KEY REFERENCES Students(Id)
+);
+
+EXEC sp_rename 'Students', 'People';
+
+ALTER TABLE Teachers
+DROP COLUMN Subject;
+
+TRUNCATE TABLE People;
+TRUNCATE TABLE Teachers;
+
