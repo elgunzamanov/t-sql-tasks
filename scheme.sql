@@ -1,81 +1,46 @@
-CREATE DATABASE Library;
+CREATE DATABASE ComputerStore;
 
-USE Library;
+USE ComputerStore;
 
--- TODO: Tables yaratmaq üçün SQL
-CREATE TABLE Authors
+CREATE TABLE Categories
 (
-   Id      INT IDENTITY PRIMARY KEY,
-   Name    NVARCHAR(50) NOT NULL,
-   Surname NVARCHAR(50) NOT NULL
+   Id           INT PRIMARY KEY IDENTITY,
+   CategoryName NVARCHAR(100)
 );
 
-CREATE TABLE Books
+CREATE TABLE Products
 (
-   Id        INT IDENTITY PRIMARY KEY,
-   AuthorId  INT           NOT NULL,
-   Name      NVARCHAR(100) NOT NULL CHECK (LEN(Name) BETWEEN 2 AND 100),
-   PageCount INT           NOT NULL CHECK (PageCount >= 10),
-   FOREIGN KEY (AuthorId) REFERENCES Authors (Id)
+   Id          INT PRIMARY KEY IDENTITY,
+   ProductName NVARCHAR(200),
+   Brand       NVARCHAR(100),
+   Model       NVARCHAR(100),
+   Price       DECIMAL(10, 2),
+   CategoryId  INT REFERENCES Categories (Id)
 );
 
-CREATE TABLE DeletedBooks
+CREATE TABLE Employees
 (
-   Id        INT,
-   AuthorId  INT,
-   Name      NVARCHAR(100),
-   PageCount INT
+   Id         INT PRIMARY KEY IDENTITY,
+   FirstName  NVARCHAR(100),
+   LastName   NVARCHAR(100),
+   FatherName NVARCHAR(100),
+   BirthDate  DATE,
+   Salary     DECIMAL(10, 2)
 );
 
--- TODO: VIEW — Id, Name, PageCount, AuthorFullName
-CREATE VIEW vw_BookList
-AS
-SELECT b.Id,
-       b.Name,
-       b.PageCount,
-       a.Name + ' ' + a.Surname AS AuthorFullName
-FROM Books b
-        JOIN Authors a ON a.Id = b.AuthorId;
+CREATE TABLE Branches
+(
+   Id         INT PRIMARY KEY IDENTITY,
+   BranchName NVARCHAR(100)
+);
 
--- TODO: Search Procedure (Book.Name və ya Author.Name ilə filtr)
-CREATE PROCEDURE sp_SearchBooks @search NVARCHAR(100)
-AS
-BEGIN
-   SELECT b.Id,
-          b.Name,
-          b.PageCount,
-          a.Name + ' ' + a.Surname AS AuthorFullName
-   FROM Books b
-           JOIN Authors a ON a.Id = b.AuthorId
-   WHERE b.Name LIKE '%' + @search + '%'
-      OR a.Name LIKE '%' + @search + '%'
-      OR a.Surname LIKE '%' + @search + '%';
-END;
-
--- TODO: Function – MinPageCount parametri, default 10
-CREATE FUNCTION fn_BookCountByPageCount(
-   @MinPageCount INT = 10
-)
-   RETURNS INT
-AS
-BEGIN
-   DECLARE @result INT;
-
-   SELECT @result = COUNT(*)
-   FROM Books
-   WHERE PageCount > @MinPageCount;
-
-   RETURN @result;
-END;
-
--- TODO: Trigger – Books-dan silinən kitab DeletedBooks-ə düşsün
-CREATE TRIGGER trg_BookDelete
-   ON Books
-   AFTER DELETE
-   AS
-BEGIN
-   INSERT INTO DeletedBooks (Id, AuthorId, Name, PageCount)
-   SELECT Id, AuthorId, Name, PageCount
-   FROM deleted;
-END;
+CREATE TABLE Sales
+(
+   Id         INT PRIMARY KEY IDENTITY,
+   ProductId  INT REFERENCES Products (Id),
+   EmployeeId INT REFERENCES Employees (Id),
+   BranchId   INT REFERENCES Branches (Id),
+   Quantity   INT,
+   SaleDate   DATE
+);
 
