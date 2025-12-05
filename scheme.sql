@@ -1,81 +1,81 @@
-CREATE DATABASE FullStackCourse
+CREATE DATABASE Library;
 
-USE FullStackCourse;
+USE Library;
 
-CREATE TABLE Telimci
+-- TODO: Tables yaratmaq üçün SQL
+CREATE TABLE Authors
 (
-   Id       INT IDENTITY (1,1) PRIMARY KEY,
-   Ad       NVARCHAR(50) NOT NULL,
-   Soyad    NVARCHAR(50) NOT NULL,
-   AtaAdi   NVARCHAR(50),
-   Fin      NVARCHAR(20),
-   Tel      NVARCHAR(20),
-   Tevellud DATE,
-   Ixtisas  NVARCHAR(50),
-   Staj     INT,
-   Status   NVARCHAR(20)
+   Id      INT IDENTITY PRIMARY KEY,
+   Name    NVARCHAR(50) NOT NULL,
+   Surname NVARCHAR(50) NOT NULL
 );
 
-CREATE TABLE Paketler
+CREATE TABLE Books
 (
-   Id     INT IDENTITY (1,1) PRIMARY KEY,
-   Ad     NVARCHAR(100) NOT NULL,
-   Qiymet DECIMAL(10, 2),
-   Muddet INT
+   Id        INT IDENTITY PRIMARY KEY,
+   AuthorId  INT           NOT NULL,
+   Name      NVARCHAR(100) NOT NULL CHECK (LEN(Name) BETWEEN 2 AND 100),
+   PageCount INT           NOT NULL CHECK (PageCount >= 10),
+   FOREIGN KEY (AuthorId) REFERENCES Authors (Id)
 );
 
-CREATE TABLE Bolme
+CREATE TABLE DeletedBooks
 (
-   Id INT IDENTITY (1,1) PRIMARY KEY,
-   Ad NVARCHAR(50) NOT NULL
+   Id        INT,
+   AuthorId  INT,
+   Name      NVARCHAR(100),
+   PageCount INT
 );
 
-CREATE TABLE Movzu
-(
-   Id INT IDENTITY (1,1) PRIMARY KEY,
-   Ad NVARCHAR(100) NOT NULL
-);
+-- TODO: VIEW — Id, Name, PageCount, AuthorFullName
+CREATE VIEW vw_BookList
+AS
+SELECT b.Id,
+       b.Name,
+       b.PageCount,
+       a.Name + ' ' + a.Surname AS AuthorFullName
+FROM Books b
+        JOIN Authors a ON a.Id = b.AuthorId;
 
-CREATE TABLE Telebe
-(
-   Id           INT IDENTITY (1,1) PRIMARY KEY,
-   Ad           NVARCHAR(50) NOT NULL,
-   Soyad        NVARCHAR(50) NOT NULL,
-   AtaAdi       NVARCHAR(50),
-   FinKod       NVARCHAR(20),
-   Universitet  NVARCHAR(100),
-   Ixtisas      NVARCHAR(50),
-   Kurs         INT,
-   Unvan        NVARCHAR(200),
-   ElaqeNomresi NVARCHAR(20),
-   Gmail        NVARCHAR(100)
-);
+-- TODO: Search Procedure (Book.Name və ya Author.Name ilə filtr)
+CREATE PROCEDURE sp_SearchBooks @search NVARCHAR(100)
+AS
+BEGIN
+   SELECT b.Id,
+          b.Name,
+          b.PageCount,
+          a.Name + ' ' + a.Surname AS AuthorFullName
+   FROM Books b
+           JOIN Authors a ON a.Id = b.AuthorId
+   WHERE b.Name LIKE '%' + @search + '%'
+      OR a.Name LIKE '%' + @search + '%'
+      OR a.Surname LIKE '%' + @search + '%';
+END;
 
-CREATE TABLE Qeydiyyat
-(
-   Id            INT IDENTITY (1,1) PRIMARY KEY,
-   TelebeId      INT NOT NULL FOREIGN KEY REFERENCES Telebe (Id),
-   PaketId       INT NOT NULL FOREIGN KEY REFERENCES Paketler (Id),
-   MuqavileTarix DATE,
-   Endirim       DECIMAL(10, 2),
-   Status        NVARCHAR(20),
-   TelimciId     INT FOREIGN KEY REFERENCES Telimci (Id)
-);
+-- TODO: Function – MinPageCount parametri, default 10
+CREATE FUNCTION fn_BookCountByPageCount(
+   @MinPageCount INT = 10
+)
+   RETURNS INT
+AS
+BEGIN
+   DECLARE @result INT;
 
-CREATE TABLE Odenis
-(
-   Id          INT IDENTITY (1,1) PRIMARY KEY,
-   QeydiyyatId INT NOT NULL FOREIGN KEY REFERENCES Qeydiyyat (Id),
-   Tarix       DATE,
-   Mebleg      DECIMAL(10, 2)
-);
+   SELECT @result = COUNT(*)
+   FROM Books
+   WHERE PageCount > @MinPageCount;
 
-CREATE TABLE VideoDers
-(
-   Id INT IDENTITY(1,1) PRIMARY KEY,
-   PaketId INT NOT NULL FOREIGN KEY REFERENCES Paketler(Id),
-   BolmeId INT NOT NULL FOREIGN KEY REFERENCES Bolme(Id),
-   MovzuId INT NOT NULL FOREIGN KEY REFERENCES Movzu(Id),
-   Ad NVARCHAR(100) NOT NULL
-);
+   RETURN @result;
+END;
+
+-- TODO: Trigger – Books-dan silinən kitab DeletedBooks-ə düşsün
+CREATE TRIGGER trg_BookDelete
+   ON Books
+   AFTER DELETE
+   AS
+BEGIN
+   INSERT INTO DeletedBooks (Id, AuthorId, Name, PageCount)
+   SELECT Id, AuthorId, Name, PageCount
+   FROM deleted;
+END;
 
