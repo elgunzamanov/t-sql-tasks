@@ -1,62 +1,24 @@
-CREATE TABLE regions (
-    region_id     INT,
-    region_name   VARCHAR(25)
+CREATE DATABASE SchoolDB;
+USE SchoolDB;
+
+CREATE TABLE Students (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    FullName NVARCHAR(100) NOT NULL,
+    Age INT CHECK (Age BETWEEN 6 AND 20),
+    Email NVARCHAR(255) UNIQUE,
+    Score INT DEFAULT 0 CHECK (Score BETWEEN 0 AND 100)
 );
 
-CREATE TABLE countries (
-    country_id    CHAR(2),
-    country_name  VARCHAR(40),
-    region_id     INT
-);
+ALTER TABLE Students
+ADD CreatedAt DATETIME DEFAULT GETDATE();
 
-CREATE TABLE locations (
-    location_id    INT,
-    street_address VARCHAR(25),
-    postal_code    VARCHAR(12),
-    city           VARCHAR(30),
-    state_province VARCHAR(12),
-    country_id     CHAR(2)
-);
+ALTER TABLE Students
+ADD CONSTRAINT CK_Students_Score_DivisibleBy5
+CHECK (Score % 5 = 0);
 
-CREATE TABLE departments (
-    department_id   INT,
-    department_name VARCHAR(30),
-    manager_id      INT,
-    location_id     INT
-);
-
-CREATE TABLE employees (
-    employee_id    INT,
-    first_name     VARCHAR(20),
-    last_name      VARCHAR(25),
-    email          VARCHAR(25),
-    phone_number   VARCHAR(20),
-    hire_date      DATE,
-    job_id         VARCHAR(10),
-    salary         DECIMAL(10,2),
-    commission_pct DECIMAL(5,2),
-    manager_id     INT,
-    department_id  INT
-);
-
-CREATE TABLE jobs (
-    job_id     VARCHAR(10),
-    job_title  VARCHAR(35),
-    min_salary DECIMAL(10,2),
-    max_salary DECIMAL(10,2)
-);
-
-CREATE TABLE job_grades (
-    grade_level VARCHAR(2),
-    lowest_sal  DECIMAL(10,2),
-    highest_sal DECIMAL(10,2)
-);
-
-CREATE TABLE job_history (
-    employee_id   INT,
-    start_date    DATE,
-    end_date      DATE,
-    job_id        VARCHAR(10),
-    department_id INT
+CREATE TABLE TopStudents (
+    Id INT PRIMARY KEY,
+    FullName NVARCHAR(100),
+    Score INT
 );
 
