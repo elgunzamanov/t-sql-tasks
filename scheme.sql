@@ -1,46 +1,47 @@
-CREATE DATABASE ComputerStore;
+CREATE DATABASE UniversityDB;
+USE UniversityDB;
 
-USE ComputerStore;
-
-CREATE TABLE Categories
+CREATE TABLE Users
 (
-   Id           INT PRIMARY KEY IDENTITY,
-   CategoryName NVARCHAR(100)
+   Id INT IDENTITY PRIMARY KEY,
+   UserName NVARCHAR(100) UNIQUE,
+   Password NVARCHAR(100),
+   FullName NVARCHAR(200)
 );
 
-CREATE TABLE Products
+CREATE TABLE UserLogs
 (
-   Id          INT PRIMARY KEY IDENTITY,
-   ProductName NVARCHAR(200),
-   Brand       NVARCHAR(100),
-   Model       NVARCHAR(100),
-   Price       DECIMAL(10, 2),
-   CategoryId  INT REFERENCES Categories (Id)
+   LogId INT IDENTITY PRIMARY KEY,
+   UserId INT,
+   Action NVARCHAR(200),
+   ActionDate DATETIME DEFAULT GETDATE()
 );
 
-CREATE TABLE Employees
+CREATE TABLE Faculties
 (
-   Id         INT PRIMARY KEY IDENTITY,
-   FirstName  NVARCHAR(100),
-   LastName   NVARCHAR(100),
-   FatherName NVARCHAR(100),
-   BirthDate  DATE,
-   Salary     DECIMAL(10, 2)
+   FacultyId INT IDENTITY PRIMARY KEY,
+   FacultyName NVARCHAR(200)
 );
 
-CREATE TABLE Branches
+CREATE TABLE Groups
 (
-   Id         INT PRIMARY KEY IDENTITY,
-   BranchName NVARCHAR(100)
+   GroupId INT IDENTITY PRIMARY KEY,
+   GroupName NVARCHAR(50),
+   FacultyId INT REFERENCES Faculties(FacultyId)
 );
 
-CREATE TABLE Sales
+CREATE TABLE Students
 (
-   Id         INT PRIMARY KEY IDENTITY,
-   ProductId  INT REFERENCES Products (Id),
-   EmployeeId INT REFERENCES Employees (Id),
-   BranchId   INT REFERENCES Branches (Id),
-   Quantity   INT,
-   SaleDate   DATE
+   StudentId INT IDENTITY PRIMARY KEY,
+   FullName NVARCHAR(200),
+   GroupId INT REFERENCES Groups(GroupId)
+);
+
+CREATE TABLE ExamResults
+(
+   ExamId INT IDENTITY PRIMARY KEY,
+   StudentId INT REFERENCES Students(StudentId),
+   Subject NVARCHAR(100),
+   Score INT
 );
 

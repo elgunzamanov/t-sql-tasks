@@ -1,71 +1,166 @@
-USE ComputerStore;
+-- TODO: 1) Login üçün procedure (Username & Password yoxlanması)
+CREATE PROCEDURE sp_UserLogin
+   @UserName NVARCHAR(100),
+   @Password NVARCHAR(100)
+AS
+BEGIN
+   SET NOCOUNT ON;
 
--- TODO: 1. Hər filialdakı işçi sayını tapın
-SELECT b.BranchName,
-       COUNT(DISTINCT s.EmployeeId) AS EmployeeCount
-FROM Branches b
-        LEFT JOIN Sales s ON b.Id = s.BranchId
-GROUP BY b.BranchName;
+   IF NOT EXISTS (SELECT 1 FROM Users WHERE UserName = @UserName)
+      BEGIN
+         PRINT 'User not found!';
+         RETURN;
+      END
 
--- TODO: 2. Hər filialda mövcud olan məhsul sayını tapın
-SELECT b.BranchName,
-       COUNT(DISTINCT s.ProductId) AS ProductsAvailable
-FROM Branches b
-        LEFT JOIN Sales s ON b.Id = s.BranchId
-GROUP BY b.BranchName;
+   IF EXISTS (SELECT 1 FROM Users WHERE UserName = @UserName AND Password = @Password)
+      BEGIN
+         PRINT 'Login successful!';
+      END
+   ELSE
+      BEGIN
+         PRINT 'Invalid password!';
+      END
+END
 
--- TODO: 3. Hər işçinin cari ayda satdığı məhsulların yekun qiymətini tapın
-SELECT e.FirstName + ' ' + e.LastName AS EmployeeName,
-       SUM(p.Price * s.Quantity)      AS TotalSalesAmount
-FROM Employees e
-        JOIN Sales s ON e.Id = s.EmployeeId
-        JOIN Products p ON s.ProductId = p.Id
-WHERE MONTH(s.SaleDate) = MONTH(GETDATE())
-  AND YEAR(s.SaleDate) = YEAR(GETDATE())
-GROUP BY e.FirstName, e.LastName;
+-- NOTE: Qeyd: Username unikal etmək üçün Users cədvəlində UNIQUE constraint olmalıdır:
+ALTER TABLE Users ADD CONSTRAINT UQ_User_UserName UNIQUE(UserName);
 
--- TODO: 4. Cari ayda hər satıcının maaşı
+-- TODO: 2) Password Reset procedure
+CREATE PROCEDURE sp_ResetPassword
+   @UserName NVARCHAR(100),
+   @NewPassword NVARCHAR(100)
+AS
+BEGIN
+   SET NOCOUNT ON;
+
+   IF NOT EXISTS (SELECT 1 FROM Users WHERE UserName = @UserName)
+      BEGIN
+         PRINT 'User does not exist!';
+         RETURN;
+      END
+
+   UPDATE Users
+   SET Password = @NewPassword
+   WHERE UserName = @UserName;
+
+   PRINT 'Password reset successfully.';
+END
+
+-- TODO: 3) Tələbənin imtahan nəticəsinin yoxlanılması
+CREATE PROCEDURE sp_CheckStudentExamResult
+@StudentId INT
+AS
+BEGIN
+   SELECT s.FullName, e.Subject, e.Score
+   FROM Students s
+      JOIN ExamResults e ON s.StudentId = e.StudentId
+   WHERE s.StudentId = @StudentId;
+END
+
+-- TODO: 4) User cədvəli üçün log cədvəlinin yaradılması
+CREATE TABLE UserLogs
+(
+   LogId INT IDENTITY PRIMARY KEY,
+   UserId INT,
+   Action NVARCHAR(200),
+   ActionDate DATETIME DEFAULT GETDATE()
+);
+
+-- NOTE: Trigger (INSERT zamanı log yazmaq):
+CREATE TRIGGER trg_User_Insert ON Users
+AFTER INSERT
+AS
+BEGIN
+   INSERT INTO UserLogs(UserId, Action)
+   SELECT Id, 'User created'
+   FROM inserted;
+END
+
+-- TODO: 5) CONCAT funksiyasının alternativi
+CREATE FUNCTION fn_MyConcat(@A NVARCHAR(MAX), @B NVARCHAR(MAX))
+   RETURNS NVARCHAR(MAX)
+AS
+BEGIN
+   RETURN (@A + @B);
+END
+
+-- TODO: 6) Maaşa görə vergi hesablayan funksiya
+CREATE FUNCTION fn_CalcTax(@Salary DECIMAL(10,2))
+   RETURNS DECIMAL(10,2)
+AS
+BEGIN
+   DECLARE @Tax DECIMAL(10,2);
+
+   IF @Salary <= 1000 SET @Tax = @Salary * 0.05;
+   ELSE IF @Salary <= 2000 SET @Tax = @Salary * 0.10;
+   ELSE SET @Tax = @Salary * 0.15;
+
+   RETURN @Tax;
+END
+
+-- TODO: 7) Ən yüksək bal toplayan 3-cü tələbənin məlumatı
+SELECT TOP 1 *
+FROM (
+   SELECT
+      s.StudentId,
+      s.FullName,
+      e.Score,
+      ROW_NUMBER() OVER (ORDER BY e.Score DESC) AS rn
+   FROM Students s
+           JOIN ExamResults e ON s.StudentId = e.StudentId
+   WHERE e.Subject = 'DS'
+) AS X
+WHERE rn = 3;
+
+-- TODO: 8) Hər fakültədən ən yüksək bal toplayan 3-cü tələbə
+SELECT *
+FROM (
+   SELECT
+      f.FacultyId,
+      f.FacultyName,
+      s.StudentId,
+      s.FullName,
+      e.Score,
+      ROW_NUMBER() OVER (
+        PARTITION BY f.FacultyId
+        ORDER BY e.Score DESC
+      ) AS rn
+   FROM Students s
+      JOIN Groups g ON s.GroupId = g.GroupId
+      JOIN Faculties f ON g.FacultyId = f.FacultyId
+      JOIN ExamResults e ON s.StudentId = e.StudentId
+   WHERE e.Subject = 'DS'
+) AS X
+WHERE rn = 3;
+
+-- TODO: 9) DS oxuyan tələbələrin sayına görə təqaüd alanların tapılması
+WITH DS_Count AS (
 SELECT
-   e.FirstName + ' ' + e.LastName AS EmployeeName,
-   350  + ISNULL(SUM(p.Price * s.Quantity), 0) * 0.01 AS MonthlySalary
-FROM Employees e
-   LEFT JOIN Sales s
-      ON e.Id = s.EmployeeId
-         AND MONTH(s.SaleDate) = MONTH(GETDATE())
-         AND YEAR(s.SaleDate) = YEAR(GETDATE())
-   LEFT JOIN Products p ON p.Id = s.ProductId
-GROUP BY e.FirstName, e.LastName;
-
--- TODO: 5. Hər filial üzrə cari aydakı qazanc
-SELECT b.BranchName,
-       SUM(p.Price * s.Quantity) * 0.01 AS MonthlyProfit
-FROM Branches b
-   JOIN Sales s
-      ON b.Id = s.BranchId
-         AND MONTH(s.SaleDate) = MONTH(GETDATE())
-         AND YEAR(s.SaleDate) = YEAR(GETDATE())
-   JOIN Products p ON p.Id = s.ProductId
-GROUP BY b.BranchName;
-
--- TODO: 6. Cari ay üzrə tam aylıq hesabat (filial → işçi → satış → əməkhaqqı → qazanc)
-SELECT
-   b.BranchName,
-   e.FirstName + ' ' + e.LastName AS EmployeeName,
-   ISNULL(SUM(p.Price * s.Quantity), 0) AS TotalSales,
-   350 + ISNULL(SUM(p.Price * s.Quantity), 0) * 0.01 AS Salary,
-   ISNULL(SUM(p.Price * s.Quantity), 0) * 0.01 AS Profit
-FROM Branches b
-   JOIN Sales s
-      ON b.Id = s.BranchId
-         AND MONTH(s.SaleDate) = MONTH(GETDATE())
-         AND YEAR(s.SaleDate) = YEAR(GETDATE())
-   JOIN Employees e ON e.Id = s.EmployeeId
-   JOIN Products p ON p.Id = s.ProductId
-GROUP BY
-   b.BranchName,
-   e.FirstName,
-   e.LastName
-ORDER BY
-   b.BranchName,
-   EmployeeName;
+   g.GroupId,
+   COUNT(*) AS ScholarshipCount
+FROM Students s
+   JOIN ExamResults e ON s.StudentId = e.StudentId
+   JOIN Groups g ON s.GroupId = g.GroupId
+WHERE e.Subject = 'DS'
+GROUP BY g.GroupId
+),
+   Ranked AS (
+      SELECT
+         s.StudentId,
+         s.FullName,
+         g.GroupId,
+         e.Score,
+         ROW_NUMBER() OVER (
+            PARTITION BY g.GroupId
+            ORDER BY e.Score DESC
+            ) AS rn
+      FROM Students s
+         JOIN ExamResults e ON s.StudentId = e.StudentId
+         JOIN Groups g ON s.GroupId = g.GroupId
+      WHERE e.Subject = 'DS'
+)
+SELECT r.*
+FROM Ranked r
+   JOIN DS_Count d ON r.GroupId = d.GroupId
+WHERE r.rn <= d.ScholarshipCount;
 
