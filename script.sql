@@ -1,128 +1,71 @@
--- TODO: 1. Bütün məhsulların siyahısı
-SELECT * FROM Products;
+USE ComputerStore;
 
--- TODO: 2. Bütün işçilərin siyahısı
-SELECT * FROM Employees;
-
--- TODO: 3. Məhsulları kateqoriyaları ilə birlikdə
-SELECT p.ProductName, c.CategoryName, p.Price
-FROM Products p
-        JOIN Categories c ON p.CategoryId = c.Id;
-
--- TODO: 4. Adı Murad olan işçi
-SELECT *
-FROM Employees
-WHERE FirstName = 'Murad';
-
--- TODO: 5. Yaşı 25-dən kiçik olan işçilər
-SELECT *
-FROM Employees
-WHERE DATEDIFF(YEAR, BirthDate, GETDATE()) < 25;
-
--- TODO: 6. Hər modeldən neçə məhsul var
-SELECT Model, COUNT(*) AS TotalProducts
-FROM Products
-GROUP BY Model;
-
--- TODO: 7. Hər markada hər modelin sayı
-SELECT Brand, Model, COUNT(*) AS TotalProducts
-FROM Products
-GROUP BY Brand, Model;
-
--- TODO: 8. Hər filial üzrə aylıq satış məbləği
+-- TODO: 1. Hər filialdakı işçi sayını tapın
 SELECT b.BranchName,
-       SUM(p.Price * s.Quantity) AS MonthlyRevenue
-FROM Sales s
-        JOIN Products p ON s.ProductId = p.Id
-        JOIN Branches b ON s.BranchId = b.Id
-WHERE MONTH(SaleDate) = MONTH(GETDATE())
-  AND YEAR(SaleDate) = YEAR(GETDATE())
+       COUNT(DISTINCT s.EmployeeId) AS EmployeeCount
+FROM Branches b
+        LEFT JOIN Sales s ON b.Id = s.BranchId
 GROUP BY b.BranchName;
 
--- TODO: 9. Ay ərzində ən çox satılan model
-SELECT TOP 1 p.Model,
-             SUM(s.Quantity) AS TotalSold
-FROM Sales s
+-- TODO: 2. Hər filialda mövcud olan məhsul sayını tapın
+SELECT b.BranchName,
+       COUNT(DISTINCT s.ProductId) AS ProductsAvailable
+FROM Branches b
+        LEFT JOIN Sales s ON b.Id = s.BranchId
+GROUP BY b.BranchName;
+
+-- TODO: 3. Hər işçinin cari ayda satdığı məhsulların yekun qiymətini tapın
+SELECT e.FirstName + ' ' + e.LastName AS EmployeeName,
+       SUM(p.Price * s.Quantity)      AS TotalSalesAmount
+FROM Employees e
+        JOIN Sales s ON e.Id = s.EmployeeId
         JOIN Products p ON s.ProductId = p.Id
-WHERE MONTH(SaleDate) = MONTH(GETDATE())
-  AND YEAR(SaleDate) = YEAR(GETDATE())
-GROUP BY p.Model
-ORDER BY TotalSold DESC;
+WHERE MONTH(s.SaleDate) = MONTH(GETDATE())
+  AND YEAR(s.SaleDate) = YEAR(GETDATE())
+GROUP BY e.FirstName, e.LastName;
 
--- TODO: 10. Ayda ən az satış edən işçi
-SELECT TOP 1 e.FirstName, e.LastName,
-             SUM(s.Quantity) AS TotalSales
-FROM Sales s
-        JOIN Employees e ON s.EmployeeId = e.Id
-WHERE MONTH(SaleDate)=MONTH(GETDATE())
-  AND YEAR(SaleDate)=YEAR(GETDATE())
-GROUP BY e.FirstName, e.LastName
-ORDER BY TotalSales;
+-- TODO: 4. Cari ayda hər satıcının maaşı
+SELECT
+   e.FirstName + ' ' + e.LastName AS EmployeeName,
+   350  + ISNULL(SUM(p.Price * s.Quantity), 0) * 0.01 AS MonthlySalary
+FROM Employees e
+   LEFT JOIN Sales s
+      ON e.Id = s.EmployeeId
+         AND MONTH(s.SaleDate) = MONTH(GETDATE())
+         AND YEAR(s.SaleDate) = YEAR(GETDATE())
+   LEFT JOIN Products p ON p.Id = s.ProductId
+GROUP BY e.FirstName, e.LastName;
 
--- TODO: 11. Ayda 3000 AZN-dən çox satış edən işçilər
-SELECT e.*, SUM(p.Price * s.Quantity) AS TotalAmount
-FROM Sales s
-        JOIN Products p ON s.ProductId = p.Id
-        JOIN Employees e ON s.EmployeeId = e.Id
-WHERE MONTH(SaleDate)=MONTH(GETDATE())
-  AND YEAR(SaleDate)=YEAR(GETDATE())
-GROUP BY e.Id, e.FirstName, e.LastName, e.FatherName, e.BirthDate, e.Salary
-HAVING SUM(p.Price * s.Quantity) > 3000;
+-- TODO: 5. Hər filial üzrə cari aydakı qazanc
+SELECT b.BranchName,
+       SUM(p.Price * s.Quantity) * 0.01 AS MonthlyProfit
+FROM Branches b
+   JOIN Sales s
+      ON b.Id = s.BranchId
+         AND MONTH(s.SaleDate) = MONTH(GETDATE())
+         AND YEAR(s.SaleDate) = YEAR(GETDATE())
+   JOIN Products p ON p.Id = s.ProductId
+GROUP BY b.BranchName;
 
--- TODO: 12. Ad, soyad və ata adını bir sütunda göstər
-SELECT CONCAT(FirstName, ' ', LastName, ' ', FatherName) AS FullName
-FROM Employees;
-
--- TODO: 13. Məhsul adı və uzunluğunu göstər
-SELECT ProductName, LEN(ProductName) AS NameLength
-FROM Products;
-
--- TODO: 14. Ən bahalı məhsul
-SELECT TOP 1 *
-FROM Products
-ORDER BY Price DESC;
-
--- TODO: 15. Ən bahalı və ən ucuz məhsul birlikdə
-SELECT *
-FROM Products
-WHERE Price = (SELECT MAX(Price) FROM Products)
-   OR Price = (SELECT MIN(Price) FROM Products);
-
--- TODO: 16. Məhsulları qiymətinə görə kateqoriyaya bölün
-SELECT ProductName, Price,
-       CASE
-          WHEN Price < 1000 THEN N'Münasib'
-          WHEN Price BETWEEN 1000 AND 2500 THEN N'Orta qiymətli'
-          WHEN Price > 2500 THEN 'Baha'
-          END AS PriceCategory
-FROM Products;
-
--- TODO: 17. Cari ayda bütün satışların cəmi
-SELECT SUM(p.Price * s.Quantity) AS TotalMonthSales
-FROM Sales s
-        JOIN Products p ON s.ProductId = p.Id
-WHERE MONTH(SaleDate)=MONTH(GETDATE())
-  AND YEAR(SaleDate)=YEAR(GETDATE());
-
--- TODO: 18. Cari ay ən çox qazanc gətirən işçi
-SELECT TOP 1 e.*,
-             SUM(p.Price * s.Quantity) AS TotalRevenue
-FROM Sales s
-        JOIN Products p ON s.ProductId = p.Id
-        JOIN Employees e ON s.EmployeeId = e.Id
-WHERE MONTH(SaleDate)=MONTH(GETDATE())
-  AND YEAR(SaleDate)=YEAR(GETDATE())
-GROUP BY e.Id, e.FirstName, e.LastName, e.FatherName, e.BirthDate, e.Salary
-ORDER BY TotalRevenue DESC;
-
--- TODO: 19. Ən çox satış edən işçinin maaşını 50% artır
-UPDATE Employees
-SET Salary = Salary * 1.5
-WHERE Id = (
-   SELECT TOP 1 e.Id
-   FROM Sales s
-           JOIN Employees e ON s.EmployeeId = e.Id
-   GROUP BY e.Id
-   ORDER BY SUM(s.Quantity) DESC
-);
+-- TODO: 6. Cari ay üzrə tam aylıq hesabat (filial → işçi → satış → əməkhaqqı → qazanc)
+SELECT
+   b.BranchName,
+   e.FirstName + ' ' + e.LastName AS EmployeeName,
+   ISNULL(SUM(p.Price * s.Quantity), 0) AS TotalSales,
+   350 + ISNULL(SUM(p.Price * s.Quantity), 0) * 0.01 AS Salary,
+   ISNULL(SUM(p.Price * s.Quantity), 0) * 0.01 AS Profit
+FROM Branches b
+   JOIN Sales s
+      ON b.Id = s.BranchId
+         AND MONTH(s.SaleDate) = MONTH(GETDATE())
+         AND YEAR(s.SaleDate) = YEAR(GETDATE())
+   JOIN Employees e ON e.Id = s.EmployeeId
+   JOIN Products p ON p.Id = s.ProductId
+GROUP BY
+   b.BranchName,
+   e.FirstName,
+   e.LastName
+ORDER BY
+   b.BranchName,
+   EmployeeName;
 
